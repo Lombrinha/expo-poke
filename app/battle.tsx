@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text, Image, ActivityIndicator, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { Audio } from 'expo-av';
 import { useFocusEffect } from 'expo-router';
-
-// --- Tipos ---
 interface Stat { base_stat: number; stat: { name: string }; }
 interface Move { name: string; power: number | null; type: string; }
 interface Pokemon {
@@ -17,11 +15,9 @@ interface Pokemon {
   isFainted: boolean;
 }
 type GameState = 'loading' | 'player_turn' | 'opponent_turn' | 'awaiting_switch' | 'finished';
-
 const POKEMON_API_BASE_URL = 'https://pokeapi.co/api/v2/';
 const TOTAL_POKEMON = 898;
 const LEVEL = 50;
-
 const BATTLE_MUSIC_FILES = [
   require('../assets/b1.mp3'),
   require('../assets/b2.mp3'),
@@ -30,8 +26,6 @@ const BATTLE_MUSIC_FILES = [
   require('../assets/b5.mp3'),
 ];
 const VICTORY_MUSIC_FILE = require('../assets/victory.mp3');
-
-// --- Funções de Lógica ---
 const fetchPokemonData = async (id: number): Promise<Pokemon> => {
   const pokemonRes = await fetch(`${POKEMON_API_BASE_URL}pokemon/${id}`);
   const pokemonData = await pokemonRes.json();
@@ -52,15 +46,12 @@ const fetchPokemonData = async (id: number): Promise<Pokemon> => {
     currentHp: maxHp, maxHp: maxHp, isFainted: false,
   };
 };
-
 const calculateDamage = (attacker: Pokemon, defender: Pokemon, move: Move) => {
   const attackStat = attacker.stats.find(s => s.stat.name === 'attack')!.base_stat;
   const defenseStat = defender.stats.find(s => s.stat.name === 'defense')!.base_stat;
   const damage = Math.floor(((((2 * LEVEL / 5) + 2) * move.power! * (attackStat / defenseStat)) / 50) + 2);
   return Math.max(1, damage);
 };
-
-// --- Componentes de UI ---
 const HealthBar = ({ currentHp, maxHp }: { currentHp: number; maxHp: number }) => {
   const healthPercentage = (currentHp / maxHp) * 100;
   const barColor = healthPercentage > 50 ? '#4CAF50' : healthPercentage > 20 ? '#FFC107' : '#F44336';
@@ -71,14 +62,11 @@ const HealthBar = ({ currentHp, maxHp }: { currentHp: number; maxHp: number }) =
     </View>
   );
 };
-
 const TeamIcon = ({ pokemon, isActive }: { pokemon: Pokemon, isActive: boolean }) => (
   <View style={[styles.teamIcon, isActive && styles.activeTeamIcon, pokemon.isFainted && styles.faintedIcon]}>
     <Image source={{ uri: pokemon.sprites.front_default }} style={styles.teamIconSprite} />
   </View>
 );
-
-// --- Ecrã Principal da Batalha ---
 export default function BattleScreen() {
   const [playerTeam, setPlayerTeam] = useState<Pokemon[]>([]);
   const [opponentTeam, setOpponentTeam] = useState<Pokemon[]>([]);
@@ -87,27 +75,19 @@ export default function BattleScreen() {
   const [gameState, setGameState] = useState<GameState>('loading');
   const [battleLog, setBattleLog] = useState<string[]>([]);
   const [showSwitchMenu, setShowSwitchMenu] = useState(false);
-  
-  // CORREÇÃO: Usar useRef para uma referência estável aos objetos de som
   const battleMusicRef = useRef<Audio.Sound | null>(null);
   const victoryMusicRef = useRef<Audio.Sound | null>(null);
-
   const activePlayerPokemon = playerTeam[activePlayerIndex];
   const activeOpponentPokemon = opponentTeam[activeOpponentIndex];
-
   const addToLog = (message: string) => setBattleLog(prev => [message, ...prev]);
-
-  // Carrega/descarrega músicas quando o ecrã foca/desfoca
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
       const loadSounds = async () => {
         try {
-          // Carrega o som de vitória
           const { sound: victorySound } = await Audio.Sound.createAsync(VICTORY_MUSIC_FILE, { isLooping: false });
           if (isMounted) {
             victoryMusicRef.current = victorySound;
-            // Inicia a primeira batalha assim que os sons estiverem prontos
             setupBattle(true);
           }
         } catch (e) {
@@ -117,29 +97,26 @@ export default function BattleScreen() {
 
       loadSounds();
 
-      return () => { // Função de limpeza executada ao sair do ecrã
+      return () => { 
         isMounted = false;
         battleMusicRef.current?.unloadAsync();
         victoryMusicRef.current?.unloadAsync();
       };
     }, [])
   );
-
   const setupBattle = useCallback(async (isInitialSetup = false) => {
     setGameState('loading');
     setBattleLog([]);
     setShowSwitchMenu(false);
-    
     await victoryMusicRef.current?.stopAsync();
     await battleMusicRef.current?.unloadAsync();
-
     try {
       const randomMusicFile = BATTLE_MUSIC_FILES[Math.floor(Math.random() * BATTLE_MUSIC_FILES.length)];
       const { sound: newBattleMusic } = await Audio.Sound.createAsync(randomMusicFile, { isLooping: true });
       battleMusicRef.current = newBattleMusic;
       await battleMusicRef.current.playAsync();
 
-      if (isInitialSetup) { // Apenas busca os dados na primeira vez
+      if (isInitialSetup) {
         const randomIds = new Set<number>();
         while (randomIds.size < 12) {
           randomIds.add(Math.floor(Math.random() * TOTAL_POKEMON) + 1);
@@ -147,11 +124,10 @@ export default function BattleScreen() {
         const pokemonData = await Promise.all(Array.from(randomIds).map(id => fetchPokemonData(id)));
         setPlayerTeam(pokemonData.slice(0, 6));
         setOpponentTeam(pokemonData.slice(6, 12));
-      } else { // Nas vezes seguintes, apenas restaura a vida e o estado
+      } else { 
         setPlayerTeam(prev => prev.map(p => ({...p, currentHp: p.maxHp, isFainted: false})));
         setOpponentTeam(prev => prev.map(p => ({...p, currentHp: p.maxHp, isFainted: false})));
       }
-      
       setActivePlayerIndex(0);
       setActiveOpponentIndex(0);
       addToLog(`Uma batalha aleatória 6v6 começou!`);
@@ -161,11 +137,9 @@ export default function BattleScreen() {
       addToLog("Não foi possível iniciar a batalha.");
     }
   }, []);
-
   const handleAttack = (attacker: Pokemon, defender: Pokemon, move: Move, isPlayerAttacking: boolean) => {
     const damage = calculateDamage(attacker, defender, move);
     const newDefenderHp = Math.max(0, defender.currentHp - damage);
-    
     if (isPlayerAttacking) {
       const newOpponentTeam = [...opponentTeam];
       newOpponentTeam[activeOpponentIndex].currentHp = newDefenderHp;
@@ -175,9 +149,7 @@ export default function BattleScreen() {
       newPlayerTeam[activePlayerIndex].currentHp = newDefenderHp;
       setPlayerTeam(newPlayerTeam);
     }
-    
     addToLog(`${attacker.name} usou ${move.name} e causou ${damage} de dano!`);
-
     if (newDefenderHp <= 0) {
       if (isPlayerAttacking) {
         const newOpponentTeam = [...opponentTeam];
@@ -187,14 +159,12 @@ export default function BattleScreen() {
         const newPlayerTeam = [...playerTeam];
         newPlayerTeam[activePlayerIndex].isFainted = true;
         setPlayerTeam(newPlayerTeam);
-      }
-      
+      }      
       addToLog(`${defender.name} desmaiou!`);
       return true;
     }
     return false;
   };
-
   const onPlayerMove = (move: Move) => {
     if (gameState !== 'player_turn') return;
     const defenderFainted = handleAttack(activePlayerPokemon, activeOpponentPokemon, move, true);
@@ -217,7 +187,6 @@ export default function BattleScreen() {
       setTimeout(() => onOpponentMove(), 1500);
     }
   };
-  
   const onOpponentMove = () => {
     const randomMove = activeOpponentPokemon.moves[Math.floor(Math.random() * activeOpponentPokemon.moves.length)];
     const defenderFainted = handleAttack(activeOpponentPokemon, activePlayerPokemon, randomMove, false);
@@ -235,7 +204,6 @@ export default function BattleScreen() {
       setGameState('player_turn');
     }
   };
-
   const handleSwitch = (index: number) => {
     if (playerTeam[index].isFainted || index === activePlayerIndex) return;
     const oldPokemonName = activePlayerPokemon.name;
@@ -250,11 +218,9 @@ export default function BattleScreen() {
         setTimeout(() => onOpponentMove(), 1500);
     }
   };
-
   if (gameState === 'loading' || !activePlayerPokemon || !activeOpponentPokemon) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#fff" /></View>;
   }
-
   const renderActionPanel = () => {
     if (gameState === 'finished') {
         return <TouchableOpacity style={styles.actionButton} onPress={() => setupBattle(false)}><Text style={styles.actionText}>Jogar Novamente</Text></TouchableOpacity>;
@@ -290,7 +256,6 @@ export default function BattleScreen() {
         </>
     );
   };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.battleArea}>
@@ -328,7 +293,6 @@ export default function BattleScreen() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#1e1e1e' },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1e1e1e' },

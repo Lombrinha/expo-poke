@@ -1,20 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, FlatList, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
-
-// --- Type Definitions ---
 interface PokemonListItem {
   name: string;
   url: string;
 }
-
 interface Pokemon {
   id: number;
   name: string;
   sprite: string;
 }
-
 const API_URL = 'https://pokeapi.co/api/v2/pokemon';
-
 export default function PokedexScreen() {
   const [pokemonList, setPokemonList] = useState<Pokemon[]>([]);
   const [nextUrl, setNextUrl] = useState<string | null>(API_URL);
@@ -54,7 +49,7 @@ export default function PokedexScreen() {
 
   useEffect(() => {
     loadMorePokemon();
-  }, []); // Carrega a primeira página ao montar o componente
+  }, []);
 
   const renderItem = ({ item }: { item: Pokemon }) => (
     <View style={styles.card}>
@@ -76,7 +71,7 @@ export default function PokedexScreen() {
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}
         contentContainerStyle={styles.list}
-        onEndReached={loadMorePokemon} // Carrega mais ao chegar no fim da lista
+        onEndReached={loadMorePokemon}
         onEndReachedThreshold={0.5}
         ListFooterComponent={renderFooter}
       />

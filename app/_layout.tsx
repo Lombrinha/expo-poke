@@ -41,7 +41,7 @@ export default function AppLayout() {
         name="battle" 
         options={{ 
           title: 'Rinha de Pokémon',
-          headerStyle: { backgroundColor: '#212121' }, // Cor escura para a batalha
+          headerStyle: { backgroundColor: '#212121' },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
         }} 

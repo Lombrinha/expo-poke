@@ -1,22 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image, ActivityIndicator, SafeAreaView, Dimensions, Animated } from 'react-native';
-
-// --- Tipos ---
 interface Stat { base_stat: number; stat: { name: string }; }
 interface Racer {
   id: number;
   name: string;
   sprite: string;
   progress: Animated.Value;
-  speed: number; // Atributo de velocidade
+  speed: number;
 }
-
 const POKEMON_API_BASE_URL = 'https://pokeapi.co/api/v2/pokemon/';
 const TOTAL_POKEMON = 898;
 const RACERS_COUNT = 6;
 const BETTING_TIME_SECONDS = 6;
 const { width } = Dimensions.get('window');
-
 export default function RaceScreen() {
   const [racers, setRacers] = useState<Racer[]>([]);
   const [gameState, setGameState] = useState<'loading' | 'betting' | 'racing' | 'finished'>('loading');
@@ -24,28 +20,21 @@ export default function RaceScreen() {
   const [selectedPokemonId, setSelectedPokemonId] = useState<number | null>(null);
   const [winner, setWinner] = useState<Racer | null>(null);
   const [resultText, setResultText] = useState('');
-  
   const bettingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Função para preparar a corrida
   const setupRace = useCallback(async () => {
     setGameState('loading');
     setWinner(null);
     setSelectedPokemonId(null);
     setResultText('');
-
-    // CORREÇÃO: Limpa o estado das animações anteriores antes de começar uma nova corrida.
     racers.forEach(racer => {
         racer.progress.stopAnimation();
         racer.progress.removeAllListeners();
     });
-
     try {
       const randomIds = new Set<number>();
       while (randomIds.size < RACERS_COUNT) {
         randomIds.add(Math.floor(Math.random() * TOTAL_POKEMON) + 1);
       }
-
       const promises = Array.from(randomIds).map(id => fetch(`${POKEMON_API_BASE_URL}${id}`).then(res => res.json()));
       const pokemonData = await Promise.all(promises);
 
@@ -59,21 +48,16 @@ export default function RaceScreen() {
           speed: speedStat,
         };
       });
-
       setRacers(newRacers);
       setGameState('betting');
     } catch (error) {
       console.error("Erro ao preparar a corrida:", error);
       setResultText('Não foi possível carregar os Pokémon. Tente novamente.');
     }
-  }, [racers]); // Adicionado 'racers' à dependência para garantir que a limpeza funciona com o estado mais recente.
-
-  // Inicia a corrida na primeira renderização
+  }, [racers]);
   useEffect(() => {
     setupRace();
-  }, []); // Removido setupRace das dependências para evitar loop, já que ele agora depende de 'racers'.
-
-  // Lógica para a contagem regressiva da aposta
+  }, []);
   useEffect(() => {
     if (gameState === 'betting') {
       setBettingTime(BETTING_TIME_SECONDS);
@@ -87,16 +71,12 @@ export default function RaceScreen() {
       }
     };
   }, [gameState]);
-
-  // Inicia a corrida quando o tempo de aposta acaba
   useEffect(() => {
     if (bettingTime === 0 && gameState === 'betting') {
       if (bettingIntervalRef.current) clearInterval(bettingIntervalRef.current);
       setGameState('racing');
     }
   }, [bettingTime, gameState]);
-
-  // Lógica da corrida
   useEffect(() => {
     if (gameState === 'racing') {
       let raceWinner: Racer | null = null;
@@ -124,14 +104,10 @@ export default function RaceScreen() {
 
       Animated.parallel(animations).start();
     }
-    
-    // CORREÇÃO: Adiciona uma função de limpeza para remover os listeners e evitar memory leaks.
     return () => {
         racers.forEach(racer => racer.progress.removeAllListeners());
     };
   }, [gameState, racers]);
-
-  // Mostra o resultado final
   useEffect(() => {
     if (gameState === 'finished' && winner) {
       if (selectedPokemonId === null) {
@@ -188,7 +164,7 @@ export default function RaceScreen() {
               <Animated.View style={{ transform: [{ 
                   translateX: racer.progress.interpolate({
                     inputRange: [0, 100],
-                    outputRange: [0, width - 80] // width - (padding + sprite size)
+                    outputRange: [0, width - 80]
                   }) 
               }] }}>
                 <Image source={{ uri: racer.sprite }} style={styles.racingSprite} />

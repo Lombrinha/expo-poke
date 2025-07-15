@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, FlatList, Image, ActivityIndicator, SafeAreaView } from 'react-native';
 
-// --- Tipos ---
 interface Card {
-  id: number; // ID único para a carta (ex: 1, 2, 3...)
-  pokemonId: number; // ID do Pokémon (ex: 25 para Pikachu)
+  id: number;
+  pokemonId: number;
   name: string;
   sprite: string;
   isFlipped: boolean;
@@ -13,9 +12,7 @@ interface Card {
 
 const POKEMON_API_BASE_URL = 'https://pokeapi.co/api/v2/pokemon/';
 const TOTAL_POKEMON = 898;
-const PAIRS_COUNT = 10; // 10 pares = 20 cartas
-
-// Função para embaralhar um array
+const PAIRS_COUNT = 10; 
 const shuffleArray = (array: any[]) => {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -30,27 +27,19 @@ export default function MemoryGameScreen() {
   const [moves, setMoves] = useState(0);
   const [isGameWon, setIsGameWon] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Função para iniciar/reiniciar o jogo
   const setupGame = useCallback(async () => {
     setIsLoading(true);
     setCards([]);
     setFlippedCards([]);
     setMoves(0);
     setIsGameWon(false);
-
     try {
-      // Pega 10 IDs de Pokémon aleatórios e únicos
       const randomIds = new Set<number>();
       while (randomIds.size < PAIRS_COUNT) {
         randomIds.add(Math.floor(Math.random() * TOTAL_POKEMON) + 1);
       }
-
-      // Busca os dados dos 10 Pokémon
       const promises = Array.from(randomIds).map(id => fetch(`${POKEMON_API_BASE_URL}${id}`).then(res => res.json()));
       const pokemonData = await Promise.all(promises);
-
-      // Cria os pares de cartas
       let cardIdCounter = 0;
       const gameCards: Card[] = pokemonData.flatMap(pokemon => {
         const cardBase = {
@@ -60,7 +49,6 @@ export default function MemoryGameScreen() {
           isFlipped: false,
           isMatched: false,
         };
-        // Cria duas cartas para cada Pokémon
         return [
           { ...cardBase, id: cardIdCounter++ },
           { ...cardBase, id: cardIdCounter++ },
@@ -74,20 +62,14 @@ export default function MemoryGameScreen() {
       setIsLoading(false);
     }
   }, []);
-
-  // Inicia o jogo na primeira renderização
   useEffect(() => {
     setupGame();
   }, [setupGame]);
-
-  // Lógica para verificar os pares virados
   useEffect(() => {
     if (flippedCards.length === 2) {
       const [firstCardIndex, secondCardIndex] = flippedCards;
       const firstCard = cards[firstCardIndex];
       const secondCard = cards[secondCardIndex];
-
-      // Se os IDs dos Pokémon forem iguais, é um par
       if (firstCard.pokemonId === secondCard.pokemonId) {
         setCards(prevCards =>
           prevCards.map((card, index) =>
@@ -96,7 +78,6 @@ export default function MemoryGameScreen() {
         );
         setFlippedCards([]);
       } else {
-        // Se não for um par, vira de volta após 1 segundo
         setTimeout(() => {
           setCards(prevCards =>
             prevCards.map((card, index) =>
@@ -108,17 +89,12 @@ export default function MemoryGameScreen() {
       }
     }
   }, [flippedCards, cards]);
-
-  // Verifica se o jogo foi ganho
   useEffect(() => {
     if (cards.length > 0 && cards.every(card => card.isMatched)) {
       setIsGameWon(true);
     }
   }, [cards]);
-
-  // Função para virar uma carta
   const handleCardFlip = (index: number) => {
-    // Impede de virar mais de 2 cartas, ou cartas já viradas/combinadas
     if (flippedCards.length === 2 || cards[index].isFlipped) {
       return;
     }

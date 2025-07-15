@@ -1,8 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Image, SafeAreaView, StatusBar, Platform } from 'react-native';
 import { Link } from 'expo-router';
-
-// O ecrã inicial que serve como menu principal.
 export default function MainMenu() {
   return (
     <SafeAreaView style={styles.container}>
@@ -15,7 +13,6 @@ export default function MainMenu() {
         <Text style={styles.title}>PokéApp</Text>
         <Text style={styles.subtitle}>Escolha a sua aventura!</Text>
       </View>
-
       <View style={styles.menuContainer}>
         <Link href="/game" asChild>
           <TouchableOpacity style={styles.menuButton}>
@@ -47,7 +44,6 @@ export default function MainMenu() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#3B4CCA', alignItems: 'center', justifyContent: 'center' },
   header: { alignItems: 'center', marginBottom: 60 },
@@ -69,7 +65,7 @@ const styles = StyleSheet.create({
   pokedexButton: { backgroundColor: '#CC0000', borderColor: '#8B0000' },
   memoryButton: { backgroundColor: '#4CAF50', borderColor: '#388E3C' },
   raceButton: { backgroundColor: '#f44336', borderColor: '#D32F2F' },
-  battleButton: { backgroundColor: '#673AB7', borderColor: '#512DA8' }, // Roxo para a batalha
+  battleButton: { backgroundColor: '#673AB7', borderColor: '#512DA8' },
   menuButtonText: {
     fontSize: 20, fontWeight: 'bold', color: '#fff',
     ...Platform.select({

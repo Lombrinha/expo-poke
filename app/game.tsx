@@ -3,13 +3,10 @@ import { StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator, Saf
 import { Audio } from 'expo-av';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-// --- Type Definitions ---
 interface Pokemon {
   name: string;
   image: string;
 }
-
 interface PokemonAPIResponse {
   name: string;
   sprites: {
@@ -20,9 +17,7 @@ interface PokemonAPIResponse {
     };
   };
 }
-
 const POKEMON_COUNT = 898;
-
 export default function GameScreen() {
   const [sound, setSound] = useState<Audio.Sound | undefined>();
   const [correctPokemon, setCorrectPokemon] = useState<Pokemon | null>(null);
@@ -31,9 +26,7 @@ export default function GameScreen() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [message, setMessage] = useState('');
   const [score, setScore] = useState(0);
-
   const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
-
   const playSound = async () => {
     try {
       if (sound) await sound.replayAsync();
@@ -41,7 +34,6 @@ export default function GameScreen() {
       console.log('Erro ao tocar o som', e);
     }
   };
-
   const fetchPokemonData = useCallback(async () => {
     setIsLoading(true);
     setIsRevealed(false);
