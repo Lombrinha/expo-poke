@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { StyleSheet, View, Text, Image, ActivityIndicator, SafeAreaView, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
+import { StyleSheet, View, Text, Image, ActivityIndicator, SafeAreaView, TouchableOpacity, ScrollView, ImageBackground, Modal, Platform } from 'react-native';
 import { Audio } from 'expo-av';
 import { useFocusEffect } from 'expo-router';
 interface Stat { base_stat: number; stat: { name: string } }
@@ -44,17 +44,15 @@ const STATUS_COLORS: { [key:string]: string } = {
     sleep: '#A8A77A',
 };
 const BATTLE_BACKGROUND_IMAGE = require('../assets/battle_bg.png');
-const POKEBALL_ICON = require('../assets/pokeball.png');
+const POKEBALL_ICON = require('../assets/R.png');
 const fetchPokemonData = async (id: number): Promise<Pokemon> => {
   const pokemonRes = await fetch(`${POKEMON_API_BASE_URL}pokemon/${id}`);
   const pokemonData = await pokemonRes.json();
-  
   const animatedSprites = pokemonData.sprites.versions['generation-v']['black-white'].animated;
   const sprites = {
       front_default: animatedSprites.front_default || pokemonData.sprites.front_default,
       back_default: animatedSprites.back_default || pokemonData.sprites.back_default,
   };
-
   const movePromises = pokemonData.moves.map((m: any) => fetch(m.move.url).then(res => res.json())).sort(() => 0.5 - Math.random());
   const moveDetails = await Promise.all(movePromises.slice(0, 20));
   const movesWithDetails: Move[] = [];
@@ -153,13 +151,11 @@ const TeamStatus = ({ team }: { team: Pokemon[] }) => (
 const SwitchPokemonButton = ({ pokemon, onPress, isActive, isFainted }: { pokemon: Pokemon, onPress: () => void, isActive: boolean, isFainted: boolean }) => {
     const hpPercentage = (pokemon.currentHp / pokemon.maxHp) * 100;
     const barColor = hpPercentage > 50 ? '#00FF00' : hpPercentage > 20 ? '#FFFF00' : '#FF0000';
-
     const buttonStyle = [
         styles.switchPokemonButton,
         isFainted ? styles.faintedSwitchButton : null,
         isActive ? styles.activeSwitchButton : null,
     ];
-
     return (
         <TouchableOpacity onPress={onPress} disabled={isFainted || isActive} style={buttonStyle}>
             <Image source={{ uri: pokemon.sprites.front_default }} style={styles.switchPokemonSprite} />
@@ -176,7 +172,6 @@ const PokemonEffectsIndicator = ({ pokemon }: { pokemon: Pokemon }) => {
     const statChanges = Object.entries(pokemon.statStages)
         .filter(([_, value]) => value !== 0)
         .map(([stat, value]) => ({ stat: stat.replace('special-', 'sp ').replace('-', ' '), value }));
-
     return (
         <View style={styles.effectsIndicatorContainer}>
             {pokemon.statusCondition && (
@@ -194,6 +189,42 @@ const PokemonEffectsIndicator = ({ pokemon }: { pokemon: Pokemon }) => {
         </View>
     );
 };
+const PokemonDetailsModal = ({ pokemon, visible, onClose, isOpponent, revealedMoves }: { pokemon: Pokemon | null, visible: boolean, onClose: () => void, isOpponent: boolean, revealedMoves: string[] }) => {
+    if (!visible || !pokemon) return null;
+    const movesToShow = isOpponent ? revealedMoves.map(moveName => pokemon.moves.find(m => m.name === moveName)).filter(Boolean) as Move[] : pokemon.moves;
+    return (
+        <Modal transparent={true} animationType="fade" visible={visible} onRequestClose={onClose}>
+            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>{pokemon.name}</Text>
+                    <View style={styles.detailSection}>
+                        <Text style={styles.detailTitle}>Tipos:</Text>
+                        <View style={styles.typesContainer}>
+                            {pokemon.types.map(type => (
+                                <View key={type} style={[styles.typeBadge, { backgroundColor: TYPE_COLORS[type] || '#A8A77A' }]}>
+                                    <Text style={styles.typeBadgeText}>{type.toUpperCase()}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                    <View style={styles.detailSection}>
+                        <Text style={styles.detailTitle}>Habilidades:</Text>
+                        {pokemon.abilities.map(ability => (
+                            <Text key={ability.name} style={styles.detailText}>{ability.name.replace('-', ' ')}</Text>
+                        ))}
+                    </View>
+                    <View style={styles.detailSection}>
+                        <Text style={styles.detailTitle}>Movimentos:</Text>
+                        {movesToShow.map(move => (
+                            <Text key={move.name} style={styles.detailText}>{move.name}</Text>
+                        ))}
+                        {isOpponent && movesToShow.length === 0 && <Text style={styles.detailText}>Nenhum movimento revelado ainda.</Text>}
+                    </View>
+                </View>
+            </TouchableOpacity>
+        </Modal>
+    );
+};
 export default function BattleScreen() {
   const [playerTeam, setPlayerTeam] = useState<Pokemon[]>([]);
   const [opponentTeam, setOpponentTeam] = useState<Pokemon[]>([]);
@@ -201,12 +232,25 @@ export default function BattleScreen() {
   const [activeOpponentIndex, setActiveOpponentIndex] = useState(0);
   const [gameState, setGameState] = useState<GameState>('loading');
   const [battleLog, setBattleLog] = useState<string[]>([]);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [pokemonInModal, setPokemonInModal] = useState<Pokemon | null>(null);
+  const [isModalForOpponent, setIsModalForOpponent] = useState(false);
+  const [revealedOpponentMoves, setRevealedOpponentMoves] = useState<string[]>([]);
   const battleMusicRef = useRef<Audio.Sound | null>(null);
   const victoryMusicRef = useRef<Audio.Sound | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const activePlayerPokemon = playerTeam[activePlayerIndex];
   const activeOpponentPokemon = opponentTeam[activeOpponentIndex];
   const addToLog = (message: string) => setBattleLog(prev => [...prev, message]);
+  const showPokemonDetails = (pokemon: Pokemon, isOpponent: boolean) => {
+      setPokemonInModal(pokemon);
+      setIsModalForOpponent(isOpponent);
+      setDetailsModalVisible(true);
+  };
+  const hidePokemonDetails = () => {
+      setPokemonInModal(null);
+      setDetailsModalVisible(false);
+  };
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
@@ -228,6 +272,7 @@ export default function BattleScreen() {
   const setupBattle = useCallback(async (isInitialSetup = false) => {
     setGameState('loading');
     setBattleLog([]);
+    setRevealedOpponentMoves([]);
     await victoryMusicRef.current?.stopAsync();
     await battleMusicRef.current?.unloadAsync();
     try {
@@ -291,9 +336,11 @@ export default function BattleScreen() {
           }
       }
   }
-  const executeAttack = (attacker: Pokemon, defender: Pokemon, move: Move | null) => {
+  const executeAttack = (attacker: Pokemon, defender: Pokemon, move: Move | null, isOpponent: boolean) => {
     if (!move || attacker.isFainted) return false;
-    
+    if (isOpponent && !revealedOpponentMoves.includes(move.name)) {
+        setRevealedOpponentMoves(prev => [...new Set([...prev, move.name])]);
+    }
     if (attacker.statusCondition === 'sleep') {
         attacker.statusCounter--;
         if (attacker.statusCounter <= 0) {
@@ -301,8 +348,8 @@ export default function BattleScreen() {
             addToLog(`${attacker.name} acordou!`);
         } else {
             addToLog(`${attacker.name} está dormindo profundamente.`);
+            return false;
         }
-        return false;
     }
     if (attacker.statusCondition === 'paralysis' && Math.random() < 0.25) {
       addToLog(`${attacker.name} está paralisado! Não consegue se mover!`);
@@ -315,8 +362,9 @@ export default function BattleScreen() {
         attacker.currentHp = attacker.maxHp;
         attacker.statusCondition = 'sleep';
         attacker.statusCounter = 2;
+        attacker.statStages = { attack: 0, defense: 0, 'special-attack': 0, 'special-defense': 0, speed: 0 };
         addToLog(`${attacker.name} foi dormir e recuperou toda a vida!`);
-        return false; 
+        return false;
     }
     if (move.damage_class === 'status') {
       if (move.meta.healing > 0) {
@@ -351,7 +399,6 @@ export default function BattleScreen() {
         addToLog(`${defender.name} foi afetado por ${move.meta.ailment.name}!`);
       }
     }
-
     if (defender.currentHp <= 0) {
       defender.isFainted = true;
       addToLog(`${defender.name} desmaiou!`);
@@ -364,35 +411,27 @@ export default function BattleScreen() {
     const player = { ...activePlayerPokemon };
     const opponent = { ...activeOpponentPokemon };
     const opponentMove = opponent.moves.find(m => m.pp > 0 && (m.power || m.damage_class === 'status')) || opponent.moves[0];
-
     const playerSpeed = player.stats.find(s => s.stat.name === 'speed')!.base_stat * getStageMultiplier(player.statStages.speed);
     const opponentSpeed = opponent.stats.find(s => s.stat.name === 'speed')!.base_stat * getStageMultiplier(opponent.statStages.speed);
-
     const firstAttacker = playerSpeed >= opponentSpeed ? player : opponent;
     const secondAttacker = playerSpeed < opponentSpeed ? player : opponent;
     const firstMove = firstAttacker === player ? playerMove : opponentMove;
     const secondMove = secondAttacker === player ? playerMove : opponentMove;
-
-    let defenderFainted = executeAttack(firstAttacker, secondAttacker, firstMove);
+    let defenderFainted = executeAttack(firstAttacker, secondAttacker, firstMove, firstAttacker === opponent);
     if (!defenderFainted && !secondAttacker.isFainted) {
-      defenderFainted = executeAttack(secondAttacker, firstAttacker, secondMove);
+      defenderFainted = executeAttack(secondAttacker, firstAttacker, secondMove, secondAttacker === opponent);
     }
-    
     let playerFaintedByStatus = false;
     let opponentFaintedByStatus = false;
     if (!player.isFainted) playerFaintedByStatus = applyEndOfTurnEffects(player);
     if (!opponent.isFainted) opponentFaintedByStatus = applyEndOfTurnEffects(opponent);
-    
     const finalPlayerFainted = player.isFainted || playerFaintedByStatus;
     const finalOpponentFainted = opponent.isFainted || opponentFaintedByStatus;
-
     setPlayerTeam(prev => prev.map(p => p.id === player.id ? player : p));
     setOpponentTeam(prev => prev.map(p => p.id === opponent.id ? opponent : p));
-
     setTimeout(() => {
       const updatedPlayerTeam = playerTeam.map(p => p.id === player.id ? player : p);
       const updatedOpponentTeam = opponentTeam.map(p => p.id === opponent.id ? opponent : p);
-
       if (updatedPlayerTeam.every(p => p.isFainted)) {
         addToLog("Você perdeu a batalha!");
         setGameState('finished');
@@ -418,18 +457,14 @@ export default function BattleScreen() {
       }
     }, 1500);
   };
-
   const onPlayerMove = (move: Move) => {
     if (gameState !== 'player_turn' || move.pp === 0) return;
     handleTurn(move);
   };
-
   const handleSwitch = (index: number) => {
     if (playerTeam[index].isFainted || index === activePlayerIndex || (gameState !== 'player_turn' && gameState !== 'awaiting_switch')) return;
-    
     const oldPokemonName = activePlayerPokemon.name;
     const newPokemon = playerTeam[index];
-
     if (gameState === 'awaiting_switch') {
         setActivePlayerIndex(index);
         addToLog(`Vai, ${newPokemon.name}!`);
@@ -442,18 +477,14 @@ export default function BattleScreen() {
         handleTurn(null);
     }
   };
-
   if (gameState === 'loading' || !activePlayerPokemon || !activeOpponentPokemon) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#fff" /></View>;
   }
-  
   const renderActionPanel = () => {
     if (gameState === 'finished') {
         return <TouchableOpacity style={styles.playAgainButton} onPress={() => setupBattle(false)}><Text style={styles.actionText}>Jogar Novamente</Text></TouchableOpacity>;
     }
-    
     const isSwitchForced = gameState === 'awaiting_switch';
-
     return (
         <View style={styles.actionPanelContainer}>
             <View>
@@ -484,10 +515,15 @@ export default function BattleScreen() {
         </View>
     );
   };
-
+  const opponentInteractionProps = Platform.OS === 'web'
+    ? { onMouseEnter: () => showPokemonDetails(activeOpponentPokemon, true), onMouseLeave: hidePokemonDetails }
+    : { onPressIn: () => showPokemonDetails(activeOpponentPokemon, true), onPressOut: hidePokemonDetails };
+  const playerInteractionProps = Platform.OS === 'web'
+    ? { onMouseEnter: () => showPokemonDetails(activePlayerPokemon, false), onMouseLeave: hidePokemonDetails }
+    : { onPressIn: () => showPokemonDetails(activePlayerPokemon, false), onPressOut: hidePokemonDetails };
   return (
     <View style={styles.container}>
-        <ImageBackground source={BATTLE_BACKGROUND_IMAGE} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <ImageBackground source={BATTLE_BACKGROUND_IMAGE} style={StyleSheet.absoluteFill} resizeMode="stretch" />
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.battleArea}>
                 <View style={styles.opponentSide}>
@@ -495,24 +531,22 @@ export default function BattleScreen() {
                         <TeamStatus team={opponentTeam} />
                         <InfoBox pokemon={activeOpponentPokemon} />
                     </View>
-                    <View>
+                    <TouchableOpacity {...opponentInteractionProps}>
                         <Image source={{ uri: activeOpponentPokemon.sprites.front_default }} style={styles.pokemonSprite} />
                         <PokemonEffectsIndicator pokemon={activeOpponentPokemon} />
-                    </View>
+                    </TouchableOpacity>
                 </View>
-
                 <View style={styles.playerSide}>
-                    <View>
+                    <TouchableOpacity {...playerInteractionProps}>
                         <Image source={{ uri: activePlayerPokemon.sprites.back_default }} style={[styles.pokemonSprite, styles.playerSprite]} />
                         <PokemonEffectsIndicator pokemon={activePlayerPokemon} />
-                    </View>
+                    </TouchableOpacity>
                     <View style={styles.playerInfoContainer}>
                         <InfoBox pokemon={activePlayerPokemon} />
                         <TeamStatus team={playerTeam} />
                     </View>
                 </View>
             </View>
-
             <View style={styles.controlsContainer}>
                 <View style={styles.actionsPanel}>
                     {renderActionPanel()}
@@ -524,16 +558,16 @@ export default function BattleScreen() {
                 </View>
             </View>
         </SafeAreaView>
+        <PokemonDetailsModal pokemon={pokemonInModal} visible={detailsModalVisible} onClose={hidePokemonDetails} isOpponent={isModalForOpponent} revealedMoves={revealedOpponentMoves} />
     </View>
   );
 }
-
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    safeArea: { flex: 1, backgroundColor: 'transparent', justifyContent: 'space-between' },
+    safeArea: { flex: 1, backgroundColor: 'transparent', justifyContent: 'flex-end' },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' },
     battleArea: { flex: 1, position: 'relative' },
-    opponentSide: { position: 'absolute', top: '10%', right: '5%', alignItems: 'center', flexDirection: 'row' },
+    opponentSide: { position: 'absolute', top: '5%', right: '5%', alignItems: 'center', flexDirection: 'row' },
     playerSide: { position: 'absolute', bottom: '5%', left: '5%', alignItems: 'center', flexDirection: 'row' },
     pokemonSprite: { width: 150, height: 150, resizeMode: 'contain' },
     playerSprite: { width: 180, height: 180 },
@@ -554,7 +588,7 @@ const styles = StyleSheet.create({
     pokeballIcon: { width: 20, height: 20, marginHorizontal: 2 },
     faintedPokeball: { opacity: 0.3 },
     controlsContainer: {
-        height: 220,
+        height: 320,
         flexDirection: 'row',
         borderTopWidth: 4,
         borderColor: '#000',
@@ -602,6 +636,55 @@ const styles = StyleSheet.create({
     effectBadgeText: {
         color: 'white',
         fontSize: 10,
+        fontWeight: 'bold',
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    modalContent: {
+        backgroundColor: '#2d2d2d',
+        borderRadius: 10,
+        padding: 20,
+        width: '80%',
+        borderWidth: 2,
+        borderColor: '#555',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: 'white',
+        marginBottom: 15,
+        textAlign: 'center',
+    },
+    detailSection: {
+        marginBottom: 10,
+    },
+    detailTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#FFCB05',
+        marginBottom: 5,
+    },
+    detailText: {
+        fontSize: 14,
+        color: 'white',
+        textTransform: 'capitalize',
+    },
+    typesContainer: {
+        flexDirection: 'row',
+    },
+    typeBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 5,
+        marginRight: 5,
+    },
+    typeBadgeText: {
+        color: 'white',
+        fontSize: 12,
         fontWeight: 'bold',
     },
 });
