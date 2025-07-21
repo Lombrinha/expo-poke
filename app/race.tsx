@@ -134,7 +134,6 @@ export default function RaceScreen() {
           >
             <Image source={{ uri: racer.sprite }} style={styles.racerSprite} />
             <Text style={styles.racerName}>{racer.name}</Text>
-            <Text style={styles.speedText}>Vel: {racer.speed}</Text>
           </TouchableOpacity>
         ))}
       </View>
