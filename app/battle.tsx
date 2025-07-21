@@ -726,7 +726,7 @@ export default function App() {
             <View style={styles.menuContainer}>
                 <Text style={styles.menuTitle}>Batalha Pokémon</Text>
                 <TouchableOpacity style={styles.menuButton} onPress={handleEnterMultiplayer}>
-                    <Text style={styles.menuButtonText}>Batalha Multiplayer</Text>
+                    <Text style={styles.menuButtonText}>Random 6v6 - Multiplayer</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
     pokeballIcon: { width: 20, height: 20, marginHorizontal: 2 },
     faintedPokeball: { opacity: 0.3 },
     playerNameText: { color: 'white', fontWeight: 'bold', marginTop: 4, textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: {width: -1, height: 1}, textShadowRadius: 10 },
-    controlsContainer: { height: 280, flexDirection: 'row', borderTopWidth: 4, borderColor: '#000', backgroundColor: 'rgba(51, 51, 51, 0.8)' },
+    controlsContainer: { height: 340, flexDirection: 'row', borderTopWidth: 4, borderColor: '#000', backgroundColor: 'rgba(51, 51, 51, 0.8)' },
     actionsPanel: { flex: 1.5, padding: 8, borderRightWidth: 2, borderColor: '#000' },
     logContainer: { flex: 1, padding: 8, backgroundColor: 'rgba(0,0,0,0.2)' },
     logText: { color: 'white', fontSize: 14, marginBottom: 4, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
