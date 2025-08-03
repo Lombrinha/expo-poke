@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, FlatList, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Link } from 'expo-router';
 interface PokemonListItem {
   name: string;
   url: string;
@@ -14,7 +15,6 @@ export default function PokedexScreen() {
   const [pokemonList, setPokemonList] = useState<Pokemon[]>([]);
   const [nextUrl, setNextUrl] = useState<string | null>(API_URL);
   const [isLoading, setIsLoading] = useState(false);
-
   const fetchPokemonDetails = async (results: PokemonListItem[]): Promise<Pokemon[]> => {
     const promises = results.map(async (p) => {
       const res = await fetch(p.url);
@@ -27,7 +27,6 @@ export default function PokedexScreen() {
     });
     return Promise.all(promises);
   };
-
   const loadMorePokemon = useCallback(async () => {
     if (!nextUrl || isLoading) {
       return;
@@ -37,7 +36,6 @@ export default function PokedexScreen() {
       const response = await fetch(nextUrl);
       const data = await response.json();
       const detailedPokemon = await fetchPokemonDetails(data.results);
-      
       setPokemonList((prevList) => [...prevList, ...detailedPokemon]);
       setNextUrl(data.next);
     } catch (error) {
@@ -46,18 +44,19 @@ export default function PokedexScreen() {
       setIsLoading(false);
     }
   }, [nextUrl, isLoading]);
-
   useEffect(() => {
     loadMorePokemon();
   }, []);
-
   const renderItem = ({ item }: { item: Pokemon }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: item.sprite }} style={styles.sprite} />
-      <Text style={styles.name}>{`#${item.id} ${item.name.charAt(0).toUpperCase() + item.name.slice(1)}`}</Text>
-    </View>
+    <Link href={`/pokedex/${item.name}`} asChild>
+      <TouchableOpacity style={styles.card}>
+        <Image source={{ uri: item.sprite }} style={styles.sprite} onError={() => console.log(`Failed to load image for ${item.name}`)} />
+        <Text style={styles.name}>{`#${item.id} ${item.name.charAt(0).toUpperCase() + item.name.slice(1)}`}</Text>
+      </TouchableOpacity>
+    </Link>
   );
 
+  // Renders the loading indicator at the bottom of the list
   const renderFooter = () => {
     if (!isLoading) return null;
     return <ActivityIndicator size="large" color="#CC0000" style={{ marginVertical: 20 }} />;

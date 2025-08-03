@@ -36,11 +36,10 @@ export default function AppLayout() {
           headerTitleStyle: { fontWeight: 'bold' },
         }} 
       />
-      {/* NOVO: Ecrã da Rinha de Pokémon */}
       <Stack.Screen 
         name="battle" 
         options={{ 
-          title: 'Rinha de Pokémon',
+          title: 'Batalha Pokémon',
           headerStyle: { backgroundColor: '#212121' },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
