@@ -3,21 +3,24 @@
     "name": "pokemont",
     "slug": "pokemont",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/download.jpg",
     "scheme": "pokemont",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
-    },
+    },    
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/download.jpg",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.lombrinha.pokemont"
+    },
+    "androidNavigationBar": {
+      "visible": "immersive"
     },
     "web": {
       "bundler": "metro",
@@ -29,7 +32,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/download.jpg",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
