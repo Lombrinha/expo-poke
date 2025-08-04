@@ -56,7 +56,7 @@ A aplicação deverá carregar no seu dispositivo e você estará pronto para jo
 ##🎮 Como Jogar
 
 * **Menu Principal**: Escolha um dos jogos disponíveis.
-* **Rinha de Pokémon**: Selecione um dos quatro ataques para atacar o oponente. Se o seu Pokémon desmaiar, escolha outro da sua equipa para continuar a batalha.
+* **Batalha de Pokémon**: Selecione um dos quatro ataques para atacar o oponente. Se o seu Pokémon desmaiar, escolha outro da sua equipa para continuar a batalha.
 * **Corrida de Pokémon**: Na tela de apostas, clique no seu Pokémon favorito. Você tem 6 segundos antes de a corrida começar.
 * **Jogo da Memória**: Clique nas cartas para as virar e tente encontrar os pares correspondentes.
 * **Quem é esse Pokémon?**: Observe a silhueta e clique no nome que você acha que está correto.
